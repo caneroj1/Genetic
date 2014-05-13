@@ -15,14 +15,14 @@
 //  we will have 10 chromosomes
 #define NGENES 9                        //  genes per chromosome
 #define NBITS 4                         //  bits per gene
-#define NCHROME 10                      //  number of chromosomes
+#define NCHROME 30                      //  number of chromosomes
 #define TARGET 23                       //  target number for evolution
 const int CBITS = NGENES * NBITS;       //  bits per chromosome
 enum OperatorType {ADD, SUB, MUL, DIV}; //  enum for the valid operators
 
 using namespace std;
 
-//  function to calculate the fitness
+//  functions to calculate the fitness, decode genes in chromosome, and evaluate corresponding expression
 float getFitness(bitset<CBITS>);
 float parseChromosome(bitset<CBITS>);
 float evaluateExpression(queue<int>, queue<OperatorType>);
@@ -55,11 +55,11 @@ float getFitness(bitset<CBITS> chromosome) {
 }
 
 //  function to decode a chromosome
-//  almost every gene has a mapping but two
-//  genes map to a digit in the range of 0-9 and the arithmetic operators: +, -, *, /
+//  almost every gene has a mapping except for two
+//  genes map to a digit in the range of 0-9 or one of the arithmetic operators: +, -, *, /
 //  a chromosome must also be of the form operand, operator, operand, operator, etc.
 float parseChromosome(bitset<CBITS> chromosome) {
-    //  operands for the expression,
+    //  this will store the operands of the expression
     queue<int> operands;
     
     //  this will store the operators of the expression
@@ -69,12 +69,12 @@ float parseChromosome(bitset<CBITS> chromosome) {
     //  from groupings of 4 in the string
     string conversion = chromosome.to_string<char, std::string::traits_type,std::string::allocator_type>();
     
-    //  this boolean value indicates when we should add an operand to the queue
+    //  this boolean value indicates when we should add an operand to the queue.
     //  if it is true, we are looking for an operand, if false we push the next
     //  operator we see
     bool operand = true;
     
-    //  we need to parse the bits of the chromosome 4 at a time
+    //  we need to parse the bits of the chromosome 4 at a time and get their corresponding value
     for (int g = 0; g < NGENES; g++) {
         bitset<NBITS> gene(conversion.substr(g * 4, 4));
         int value = (int)gene.to_ulong();
@@ -122,16 +122,15 @@ float parseChromosome(bitset<CBITS> chromosome) {
 //  a fitness value will be returned that indicates how close the expression comes to TARGET
 //  the two queues are used in unison in order to provide the data for the expression
 float evaluateExpression(queue<int> operands, queue<OperatorType> expression) {
-    //  use the two queues to create the expression and evaluate the fitness
     int op1, op2;           //  operands for the expression
     float fitness = 0;      //  the fitness of the equation as determined by how close it gets to TARGET
-    int round = 1;          //  the algorithm proceeds differently on the first iteration, this keeps track
+    bool first = true;      //  the algorithm proceeds differently on the first iteration
     bool cont = true;       //  bool to indicate if the expression has been formed correctly up to current
-    //  point and means we should proceed
+                            //  point. true means we should proceed
     
     do {
         //  first iteration
-        if (round == 1) {
+        if (first) {
             if (operands.size() >= 2) {             //  pop 2 operands from the stack if they are available
                 op1 = operands.front();
                 operands.pop();
@@ -197,7 +196,7 @@ float evaluateExpression(queue<int> operands, queue<OperatorType> expression) {
             }
             else cont = false;                      //  else, the expression is malformed
         }
-        round++;                                    //  increment the round counter
+        first = false;                              //  we have moved on from the first round
     } while (cont);
     
     //  return the result of the expression
