@@ -13,16 +13,19 @@
 
 //  each chromosome will be made up of 9 genes, each made up of 4 bits
 //  we will have 10 chromosomes
-#define NGENES 9                    //  genes per chromosome
-#define NBITS 4                     //  bits per gene
-#define NCHROME 10                  //  number of chromosomes
-#define TARGET 23                   //  target number for evolution
-const int CBITS = NGENES * NBITS;   //  bits per chromosome
+#define NGENES 9                        //  genes per chromosome
+#define NBITS 4                         //  bits per gene
+#define NCHROME 10                      //  number of chromosomes
+#define TARGET 23                       //  target number for evolution
+const int CBITS = NGENES * NBITS;       //  bits per chromosome
+enum OperatorType {ADD, SUB, MUL, DIV}; //  enum for the valid operators
 
 using namespace std;
 
 //  function to calculate the fitness
 float getFitness(bitset<CBITS>);
+float parseChromosome(bitset<CBITS>);
+float evaluateExpression(queue<int>, queue<OperatorType>);
 
 int main() {
     //  need an array of bitsets to hold the population
@@ -45,17 +48,20 @@ int main() {
 }
 
 //  function to compute the fitness of a given chromosome
+//  passes the chromosome to the parse function which will pass the proper queues to the evaluator function
+//  the result will be returned as the fitness
+float getFitness(bitset<CBITS> chromosome) {
+    return parseChromosome(chromosome);
+}
+
+//  function to decode a chromosome
 //  almost every gene has a mapping but two
 //  genes map to a digit in the range of 0-9 and the arithmetic operators: +, -, *, /
 //  a chromosome must also be of the form operand, operator, operand, operator, etc.
-float getFitness(bitset<CBITS> chromosome) {
-    
+float parseChromosome(bitset<CBITS> chromosome) {
     //  operands for the expression,
     queue<int> operands;
     
-    //  enum for the valid operators
-    enum OperatorType {ADD, SUB, MUL, DIV};
-
     //  this will store the operators of the expression
     queue<OperatorType> expression;
     
@@ -109,13 +115,19 @@ float getFitness(bitset<CBITS> chromosome) {
             }
         }
     }
-    
+    return evaluateExpression(operands, expression);
+}
+
+//  function to evaluate a chromosome based upon the expression it encodes
+//  a fitness value will be returned that indicates how close the expression comes to TARGET
+//  the two queues are used in unison in order to provide the data for the expression
+float evaluateExpression(queue<int> operands, queue<OperatorType> expression) {
     //  use the two queues to create the expression and evaluate the fitness
     int op1, op2;           //  operands for the expression
     float fitness = 0;      //  the fitness of the equation as determined by how close it gets to TARGET
     int round = 1;          //  the algorithm proceeds differently on the first iteration, this keeps track
     bool cont = true;       //  bool to indicate if the expression has been formed correctly up to current
-                            //  point and means we should proceed
+    //  point and means we should proceed
     
     do {
         //  first iteration
@@ -187,7 +199,7 @@ float getFitness(bitset<CBITS> chromosome) {
         }
         round++;                                    //  increment the round counter
     } while (cont);
-
+    
     //  return the result of the expression
     //  fitness is how close it comes to calculating the value of the target
     return fitness/TARGET;
