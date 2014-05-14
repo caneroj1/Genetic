@@ -8,6 +8,7 @@
 #include <iostream>
 #include <bitset>
 #include <string>
+#include <sstream>
 #include <cmath>
 #include <queue>
 #include <vector>
@@ -19,6 +20,7 @@
 #define NBITS 4                         //  bits per gene
 #define NCHROME 30                      //  number of chromosomes
 #define TARGET 23                       //  target number for evolution
+#define GENERATIONS 10                  //  number of generations to go through
 const int CBITS = NGENES * NBITS;       //  bits per chromosome
 enum OperatorType {ADD, SUB, MUL, DIV}; //  enum for the valid operators
 
@@ -34,13 +36,15 @@ struct gene_fit {
 bool compare(gene_fit g1, gene_fit g2) { return (g1.fitness < g2.fitness); }
 
 //  functions to calculate the fitness, decode genes in chromosome, evaluate corresponding expression,
-//  perform crossovers, run tournaments, and advance to the next generation
+//  perform crossovers, run tournaments, mutate chromosome, toString, and advance to the next generation
 float getFitness(bitset<CBITS>);
 float parseChromosome(bitset<CBITS>);
 float evaluateExpression(queue<int>, queue<OperatorType>);
 void crossover(bitset<CBITS>, bitset<CBITS>, bitset<CBITS>[]);
 gene_fit tournament(vector<gene_fit>);
 vector<gene_fit> generation(vector<gene_fit>);
+bitset<CBITS> mutate(bitset<CBITS>);
+string toString(gene_fit);
 
 int main() {
     //  create a vector of these gene and fitness pair structs
@@ -50,23 +54,32 @@ int main() {
     //  seed RNG
     srand(time(NULL));
     
+    cout << "Generation 0: " << endl;
+    
     //  initialize the chromosomes in the vector
     //  generate a random number in the range of 2^n, where n is the number of bits per chromosome
     //  compute the initial fitness
     for (vector<gene_fit>::iterator iter = genepool.begin(); iter != genepool.end(); iter++) {
         iter->gene = rand() % (int)(pow(2, CBITS));
+        iter->gene[32] = rand() % 2;
+        iter->gene[33] = rand() % 2;
+        iter->gene[34] = rand() % 2;
+        iter->gene[35] = rand() % 2;
         iter->fitness = getFitness(iter->gene);
-        cout << iter->fitness << endl;
+        cout << toString(*iter);
     }
     
-    cout << "Advancing to the next generation." << endl;
-    //  advance the generation
-    genepool = generation(genepool);
-    
-    //  compute the fitness of the next generation
-    for (vector<gene_fit>::iterator iter = genepool.begin(); iter != genepool.end(); iter++) {
-        iter->fitness = getFitness(iter->gene);
-        cout << iter->fitness << endl;
+    //  start the evolution
+    for (int gen = 0; gen < GENERATIONS; gen++) {
+        cout << "Generation " << gen + 1 << ": " << endl;
+        //  advance the generation
+        generation(genepool);
+        
+        //  compute fitness
+        for (vector<gene_fit>::iterator iter = genepool.begin(); iter != genepool.end(); iter++) {
+            iter->fitness = getFitness(iter->gene);
+            cout << toString(*iter);
+        }
     }
     
     return 0;
@@ -356,5 +369,83 @@ vector<gene_fit> generation(vector<gene_fit> population) {
         next_gen.push_back(*iter);
     }
     
+    //  now that we have the full set of individuals for the next generation, we should do mutation on them
+    for (vector<gene_fit>::iterator iter = next_gen.begin(); iter != next_gen.end(); iter++) {
+        iter->gene = mutate(iter->gene);
+    }
     return next_gen;
+}
+
+//  this function will mutate a chromosome. the kind of mutation implemented here is a point mutation in
+//  single bits. the probability that a single bit will be mutated is 1 / (CBITS), so generally 1 bit per
+//  chromosome is mutated. a mutation in a bit will make 0 become 1 and a 1 become 0.
+bitset<CBITS> mutate(bitset<CBITS> chromosome) {
+    int m;
+    for (int i = 0; i < CBITS; i++) {
+        //  generate a number in the range of 0-CBITS. A 0 indicates a mutation will occur.
+        m = rand() % CBITS;
+        if (m == 0) {
+            chromosome.flip(i);
+        }
+    }
+    return chromosome;
+}
+
+//  this function accepts a single gene_fit item and returns a neatly formatted string of that chromosome
+string toString(gene_fit gene) {
+    //  string stream for the results
+    ostringstream result;
+    result << "Fitness: " << gene.fitness << endl << "Expression: ";
+    
+    //  convert the gene's chromosome to a string so it can be parsed
+    string conversion = gene.gene.to_string<char, std::string::traits_type,std::string::allocator_type>();
+    
+    //  this boolean value indicates when we should add an operand to the queue.
+    //  if it is true, we are looking for an operand, if false we push the next
+    //  operator we see
+    bool operand = true;
+    
+    //  we need to parse the bits of the chromosome 4 at a time and get their corresponding value
+    for (int g = 0; g < NGENES; g++) {
+        bitset<NBITS> gene(conversion.substr(g * 4, 4));
+        int value = (int)gene.to_ulong();
+        
+        //  we want to add an operand
+        //  if value is less than 10, it corresponds to 0-9
+        if(operand) {
+            if (value < 10) {
+                result << value << " ";
+                operand = false;
+            }
+        }
+        //  we want to add an operator
+        //  10 = +, 11 = -, 12 = *, 13 = div
+        else {
+            if (value >= 10) {
+                switch (value) {
+                    case 10:
+                        result << " + ";
+                        operand = true;
+                        break;
+                        
+                    case 11:
+                        result << " - ";
+                        operand = true;
+                        break;
+                        
+                    case 12:
+                        result << " * ";
+                        operand = true;
+                        break;
+                        
+                    case 13:
+                        result << " / ";
+                        operand = true;
+                        break;
+                }
+            }
+        }
+    }
+    result << "\n\n";
+    return result.str();
 }

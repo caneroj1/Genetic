@@ -5,36 +5,36 @@
 	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
 	<false/>
 	<key>IDESourceControlProjectIdentifier</key>
-	<string>7FFBC4A0-B418-4370-86AB-3BC5B79995BF</string>
+	<string>9BD611F1-CFAA-451C-837D-D2C6A06745A1</string>
 	<key>IDESourceControlProjectName</key>
 	<string>gene</string>
 	<key>IDESourceControlProjectOriginsDictionary</key>
 	<dict>
-		<key>C9EC2588-64A8-4EC6-A727-4EDD5033C0C5</key>
-		<string>https://github.com/caneroj1/genetic.git</string>
+		<key>5DE84CBF-B6D5-4836-86E9-63C72DC4C9B7</key>
+		<string>https://github.com/caneroj1/Genetic.git</string>
 	</dict>
 	<key>IDESourceControlProjectPath</key>
 	<string>gene.xcodeproj/project.xcworkspace</string>
 	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
 	<dict>
-		<key>C9EC2588-64A8-4EC6-A727-4EDD5033C0C5</key>
+		<key>5DE84CBF-B6D5-4836-86E9-63C72DC4C9B7</key>
 		<string>../..</string>
 	</dict>
 	<key>IDESourceControlProjectURL</key>
-	<string>https://github.com/caneroj1/genetic.git</string>
+	<string>https://github.com/caneroj1/Genetic.git</string>
 	<key>IDESourceControlProjectVersion</key>
 	<integer>110</integer>
 	<key>IDESourceControlProjectWCCIdentifier</key>
-	<string>C9EC2588-64A8-4EC6-A727-4EDD5033C0C5</string>
+	<string>5DE84CBF-B6D5-4836-86E9-63C72DC4C9B7</string>
 	<key>IDESourceControlProjectWCConfigurations</key>
 	<array>
 		<dict>
 			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
 			<string>public.vcs.git</string>
 			<key>IDESourceControlWCCIdentifierKey</key>
-			<string>C9EC2588-64A8-4EC6-A727-4EDD5033C0C5</string>
+			<string>5DE84CBF-B6D5-4836-86E9-63C72DC4C9B7</string>
 			<key>IDESourceControlWCCName</key>
-			<string>genetic</string>
+			<string>Genetic</string>
 		</dict>
 	</array>
 </dict>
