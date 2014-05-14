@@ -10,6 +10,8 @@
 #include <string>
 #include <cmath>
 #include <queue>
+#include <vector>
+#include <limits.h>
 
 //  each chromosome will be made up of 9 genes, each made up of 4 bits
 //  we will have 10 chromosomes
@@ -22,26 +24,49 @@ enum OperatorType {ADD, SUB, MUL, DIV}; //  enum for the valid operators
 
 using namespace std;
 
-//  functions to calculate the fitness, decode genes in chromosome, and evaluate corresponding expression
+//  create a struct to store a bitset (chromosome) and the associated fitness
+struct gene_fit {
+    float fitness = INT_MIN;
+    bitset<CBITS> gene;
+};
+
+//  function for sorting the vector of gene_fits
+bool compare(gene_fit g1, gene_fit g2) { return (g1.fitness < g2.fitness); }
+
+//  functions to calculate the fitness, decode genes in chromosome, evaluate corresponding expression,
+//  perform crossovers, run tournaments, and advance to the next generation
 float getFitness(bitset<CBITS>);
 float parseChromosome(bitset<CBITS>);
 float evaluateExpression(queue<int>, queue<OperatorType>);
+void crossover(bitset<CBITS>, bitset<CBITS>, bitset<CBITS>[]);
+gene_fit tournament(vector<gene_fit>);
+vector<gene_fit> generation(vector<gene_fit>);
 
 int main() {
-    //  need an array of bitsets to hold the population
-    bitset<CBITS> genepool[NCHROME];
+    //  create a vector of these gene and fitness pair structs
+    vector<gene_fit> genepool(NCHROME);
     
     //  initialize the gene pool
     //  seed RNG
     srand(time(NULL));
-    for (int i = 0; i < NCHROME; i++) {
-        //  generate a random number in the range of 2^n, where n is the number of bits per chromosome
-        genepool[i] = rand() % (int)(pow(2, CBITS));
+    
+    //  initialize the chromosomes in the vector
+    //  generate a random number in the range of 2^n, where n is the number of bits per chromosome
+    //  compute the initial fitness
+    for (vector<gene_fit>::iterator iter = genepool.begin(); iter != genepool.end(); iter++) {
+        iter->gene = rand() % (int)(pow(2, CBITS));
+        iter->fitness = getFitness(iter->gene);
+        cout << iter->fitness << endl;
     }
     
-    //  compute the fitness for each chromosome in the population
-    for (int i = 0; i < NCHROME; i++) {
-        cout << getFitness(genepool[i]) << endl;
+    cout << "Advancing to the next generation." << endl;
+    //  advance the generation
+    genepool = generation(genepool);
+    
+    //  compute the fitness of the next generation
+    for (vector<gene_fit>::iterator iter = genepool.begin(); iter != genepool.end(); iter++) {
+        iter->fitness = getFitness(iter->gene);
+        cout << iter->fitness << endl;
     }
     
     return 0;
@@ -201,5 +226,135 @@ float evaluateExpression(queue<int> operands, queue<OperatorType> expression) {
     
     //  return the result of the expression
     //  fitness is how close it comes to calculating the value of the target
-    return fitness/TARGET;
+    
+    //  distance of solution from target
+    int dist = abs(fitness - TARGET);
+    
+    return (float)(TARGET - dist)/TARGET;
+}
+
+//  this function will perform a crossover operation between two parents in order to create two child
+//  chromosomes from them. a random point along the chromosome will be generated and all bits after that
+//  points on both chromosomes will be swapped in order to create the child chromosome
+void crossover(bitset<CBITS> parent1, bitset<CBITS> parent2, bitset<CBITS> child[]) {
+    //  generate the crossover point
+    int crossover_point = rand() % CBITS;
+    
+    //  the bits on chromosome 1 and chromosome 2 up to the crossover point should be identical on child 1
+    //  and child 2 respectively
+    for (int i = 0; i < crossover_point; i++) {
+        child[0][i] = parent1[i];
+        child[1][i] = parent2[i];
+    }
+    
+    //  now we swap the bits past the crossover point
+    for (int i = crossover_point; i < CBITS; i++) {
+        child[0][i] = parent2[i];
+        child[0][i] = parent1[i];
+    }
+}
+
+//  this function will take the entire genepool and run tournament selection amongst them. individuals from
+//  the population will be randomly selected to compete in the tournament. the individual with the highest
+//  fitness is the winner of that tournament and will be returned. this individual will serve as a parent.
+gene_fit tournament(vector<gene_fit> population) {
+    //  the number of individuals in each tournament is a third of the total population size
+    int participants = NCHROME / 3;
+    
+    //  number of individuals selected so far
+    int selected = 0;
+    
+    //  the winner of the tournament
+    gene_fit winner;
+
+    while (selected < participants) {
+        //  compute a random number in the range of the population size to choose an individual
+        //  create the iterator and advance it the necessary number of places from the beginning
+        int chosen = rand() % population.size();
+        vector<gene_fit>::iterator iter = population.begin();
+        advance(iter, chosen-1);
+        
+        if (winner.fitness < iter->fitness) {
+            winner.gene = iter->gene;
+            winner.fitness = iter->fitness;
+        }
+        
+        //  erase the chosen element from the population
+        population.erase(iter);
+        selected++;
+    }
+    
+    //  return the winner of the tournament
+    return winner;
+}
+
+//  this function will advance the population to the next generation
+//  it will run the appropriate number of tournaments, use the winners to create the children, and
+//  create a new population for the next generation. it will return a vector of the next population
+vector<gene_fit> generation(vector<gene_fit> population) {
+    //  we will run 16 tournaments
+    int num_tournaments = 16;
+    int chosen;
+    
+    //  copy of population for sorting purposes
+    vector<gene_fit> copy = population;
+    
+    //  parent1, parent2
+    gene_fit parent1, parent2;
+    
+    //  array of children to be passed to the crossover function
+    bitset<CBITS> children[2];
+    
+    //  vectors that will hold the parents to be used for crossover and the next gen of individuals
+    vector<gene_fit> parents, next_gen;
+    
+    //  run the tournaments and add the winners to the next generation
+    for (int i = 0; i < num_tournaments; i++) {
+        parents.push_back(tournament(population));
+    }
+    
+    //  select parents randomly from the parents vector to perform crossover
+    for (int i = 0; i < num_tournaments/2; i++) {
+        //  choose the first parent
+        chosen = rand() % parents.size();
+        vector<gene_fit>::iterator iter = parents.begin();
+        advance(iter, chosen-1);
+        
+        //  assign values, remove the parent from the vector
+        parent1 = *iter;
+        parents.erase(iter);
+        
+        //  choose the second parent
+        chosen = rand() % parents.size();
+        iter = parents.begin();
+        advance(iter, chosen-1);
+        
+        //  assign values, remove the parent from the vector
+        parent2 = *iter;
+        parents.erase(iter);
+        
+        //  crossover between the two parents
+        crossover(parent1.gene, parent2.gene, children);
+        
+        //  copy the bitset from the crossover to the new child and add it to the next generation
+        //  do it for both children
+        gene_fit *c = new gene_fit;
+        c->gene = children[0];
+        next_gen.push_back(*c);
+        delete c;
+        
+        gene_fit *d = new gene_fit;
+        d->gene = children[1];
+        next_gen.push_back(*d);
+        delete d;
+    }
+    
+    //  at this point, we only have 16 children in the next generation, we need to choose the 14 most fit
+    //  individuals from the last generation
+    sort(copy.begin(), copy.end(), compare);
+    for (vector<gene_fit>::iterator iter = copy.begin(); iter < copy.begin()+14; iter++) {
+        next_gen.push_back(*iter);
+    }
+    
+    return next_gen;
 }
